@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardián del Aire - Zinacantepec</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --azul-header: #3498db;
+            --verde-boton: #2ecc71;
+            --rojo-alerta: #e74c3c;
+            --fondo-gris: #95a5a6;
+            --borde-negro: 2px solid #000;
+        }
+
+        body { 
+            margin: 0; font-family: 'Comic Sans MS', cursive, sans-serif; 
+            background-color: var(--fondo-gris); height: 100vh; display: flex; flex-direction: column;
+        }
+
+        header { 
+            background-color: #fdf6e3; border-bottom: var(--borde-negro); 
+            display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;
+        }
+        .btn-volver {
+            background: white; border: var(--borde-negro); padding: 5px 10px; font-weight: bold;
+            box-shadow: 2px 2px 0px #000; cursor: pointer; text-transform: uppercase;
+        }
+        .header-title {
+            background-color: #2c3e50; color: white; border: var(--borde-negro);
+            padding: 5px 15px; font-weight: bold; font-size: 13px;
+        }
+
+        .screen { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
+        .active { display: flex; }
+
+        .map-frame {
+            background: white; border: var(--borde-negro); padding: 8px; flex: 1;
+            position: relative; box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        #map { height: 100%; width: 100%; border: 1px solid #000; }
+        .btn-flotante { 
+            position: absolute; bottom: 20px; right: 20px; background: white; 
+            border: 3px solid var(--verde-boton); width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 30px; 
+            color: var(--verde-boton); z-index: 1000; text-decoration: none; font-weight: bold;
+        }
+
+        .card-stats {
+            background: #d5e4e6; border: var(--borde-negro); padding: 15px; margin-bottom: 10px; text-align: center;
+        }
+        .chart-box { 
+            display: flex; align-items: flex-end; justify-content: space-around; 
+            height: 100px; margin: 15px 0; border-left: 2px solid #000; border-bottom: 2px solid #000;
+        }
+        .bar { width: 20px; border: 1px solid #000; }
+        .btn-stats { 
+            background: #fdf6e3; border: var(--borde-negro); padding: 8px; 
+            font-weight: bold; width: 45%; margin: 5px; box-shadow: 2px 2px 0px #000;
+        }
+
+        .consejo-item {
+            background-color: #7d9432; border: var(--borde-negro); padding: 12px;
+            margin-bottom: 12px; color: black; font-size: 14px;
+        }
+
+        nav { 
+            background: #fdf6e3; border-top: var(--borde-negro); 
+            display: flex; justify-content: space-around; padding: 10px 0;
+        }
+        .nav-btn { text-align: center; font-size: 10px; font-weight: bold; cursor: pointer; flex: 1; }
+
+        /* ========== CÓDIGO RESPONSIVE AGREGADO (SIN MODIFICAR LO EXISTENTE) ========== */
+        
+        /* Tablets y móviles grandes */
+        @media (max-width: 768px) {
+            .card-stats {
+                padding: 10px;
+            }
+            .chart-box {
+                height: 80px;
+            }
+            .bar {
+                width: 20px;
+            }
+            .btn-stats {
+                width: 100%;
+                margin: 5px 0;
+            }
+            .map-frame {
+                min-height: 350px;
+            }
+            .btn-flotante {
+                width: 45px;
+                height: 45px;
+                font-size: 28px;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+        
+        /* Móviles pequeños */
+        @media (max-width: 480px) {
+            body {
+                padding-bottom: 55px;
+            }
+            .header-title {
+                font-size: 10px;
+                padding: 3px 10px;
+            }
+            .btn-volver {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            .chart-box {
+                height: 60px;
+                gap: 5px;
+            }
+            .bar {
+                width: 15px;
+            }
+            .consejo-item {
+                font-size: 11px;
+                padding: 10px;
+            }
+            .nav-btn {
+                font-size: 9px;
+            }
+            .card-stats p {
+                font-size: 12px;
+            }
+            #detalleTipos {
+                font-size: 10px;
+            }
+        }
+        
+        /* Móviles muy pequeños (320px) */
+        @media (max-width: 360px) {
+            .bar {
+                width: 12px;
+            }
+            .chart-box {
+                gap: 3px;
+            }
+            .btn-flotante {
+                width: 40px;
+                height: 40px;
+                font-size: 24px;
+            }
+        }
+        
+        /* Orientación horizontal en móviles */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .map-frame {
+                min-height: 250px;
+            }
+            body {
+                padding-bottom: 50px;
+            }
+        }
+        
+        /* Mejora táctil para botones en móviles */
+        @media (max-width: 768px) {
+            .nav-btn, .btn-volver, .btn-stats, .btn-flotante {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .nav-btn {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-map" class="screen active">
+        <header>
+            <button class="btn-volver">← VOLVER</button>
+            <div class="header-title">REPORTE AMBIENTAL</div>
+        </header>
+        <p style="text-align: center; font-size: 12px; font-weight: bold;">
+            <span id="fechaActual"></span>
+        </p>
+        <div class="map-frame">
+            <div id="map"></div>
+            <a href="reportar.html" class="btn-flotante">+</a>
+        </div>
+    </div>
+
+    <div id="screen-stats" class="screen">
+        <header>
+            <button class="btn-volver" onclick="show('screen-map')">← VOLVER</button>
+            <div class="header-title">ESTADÍSTICAS</div>
+        </header>
+        <div class="card-stats">
+            <p><strong id="totalReportes">TOTAL DE REPORTES: 0</strong></p>
+            <div id="graficaDinamica" class="chart-box">
+                <!-- Las barras se generarán con JS -->
+            </div>
+            <div id="detalleTipos" style="font-size: 11px;"></div>
+        </div>
+        <div style="text-align: center;">
+            <p id="estaSemana">ESTA SEMANA: 0 REPORTES</p>
+            <p><strong id="tendencia">--</strong></p>
+            <button class="btn-stats" onclick="show('screen-map')">VER MAPA</button>
+            <button class="btn-stats" id="btnCompartir">COMPARTIR</button>
+        </div>
+    </div>
+
+    <div id="screen-tips" class="screen">
+        <header>
+            <button class="btn-volver" onclick="show('screen-map')">← VOLVER</button>
+            <div class="header-title">CONSEJOS AMBIENTALES</div>
+        </header>
+        <div id="consejosContainer">
+            <!-- Los consejos se cargarán dinámicamente -->
+            <div class="consejo-item">Cargando consejos...</div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-btn" onclick="show('screen-map')">🏠<br>INICIO</div>
+        <div class="nav-btn" onclick="cargarEstadisticas(); show('screen-stats')">📊<br>ESTADÍSTICAS</div>
+        <div class="nav-btn" onclick="cargarConsejos(); show('screen-tips')">⚠️<br>ALERTAS</div>
+        <div class="nav-btn">👤<br>PERFIL</div>
+    </nav>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let markersLayer;
+
+        // -------------------- FUNCIONES GENERALES --------------------
+        function show(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'screen-map') {
+                setTimeout(() => map.invalidateSize(), 100);
+                cargarReportesEnMapa();
+            }
+        }
+
+        // Mostrar fecha actual
+        const hoy = new Date();
+        document.getElementById('fechaActual').innerText = hoy.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        // -------------------- MAPA --------------------
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([19.2849, -99.7342], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            markersLayer = L.layerGroup().addTo(map);
+            cargarReportesEnMapa();
+        }
+
+        // Íconos personalizados según tipo de problema (coincide con BD)
+        const iconos = {
+            1: L.divIcon({ html: '🔥', className: 'custom-icon', iconSize: [20,20] }),
+            2: L.divIcon({ html: '🪵', className: 'custom-icon', iconSize: [20,20] }),
+            3: L.divIcon({ html: '🗑️', className: 'custom-icon', iconSize: [20,20] }),
+            4: L.divIcon({ html: '👃', className: 'custom-icon', iconSize: [20,20] })
+        };
+
+        // Cargar reportes desde el servidor y agregar marcadores
+        async function cargarReportesEnMapa() {
+            if (!map) return;
+            markersLayer.clearLayers();
+
+            try {
+                const response = await fetch('obtener_reportes.php');
+                const reportes = await response.json();
+                reportes.forEach(r => {
+                    const icono = iconos[r.tipo_id] || L.divIcon({ html: '📍' });
+                    const marker = L.marker([r.latitud, r.longitud], { icon: icono }).addTo(markersLayer);
+                    marker.bindPopup(`
+                        <strong>Tipo:</strong> ${r.tipo_nombre}<br>
+                        <strong>Descripción:</strong> ${r.descripcion}<br>
+                        <strong>Fecha/Hora foto:</strong> ${r.fecha_hora || 'No registrada'}<br>
+                        <img src="uploads/${r.foto_url}" width="100" style="border:1px solid #000;">
+                    `);
+                });
+            } catch (error) {
+                console.error('Error al cargar reportes:', error);
+            }
+        }
+
+        // -------------------- ESTADÍSTICAS --------------------
+        async function cargarEstadisticas() {
+            try {
+                const response = await fetch('estadisticas.php');
+                const data = await response.json();
+
+                // Total de reportes
+                const total = data.quemas + data.tala + data.basura + data.olor;
+                document.getElementById('totalReportes').innerHTML = `TOTAL DE REPORTES: ${total}`;
+
+                // Generar gráfica de barras
+                const graficaDiv = document.getElementById('graficaDinamica');
+                graficaDiv.innerHTML = '';
+                const categorias = [
+                    { nombre: 'Quemas', valor: data.quemas, color: '#e74c3c' },
+                    { nombre: 'Tala', valor: data.tala, color: '#8B4513' },
+                    { nombre: 'Basura', valor: data.basura, color: '#95a5a6' },
+                    { nombre: 'Mal olor', valor: data.olor, color: '#f1c40f' }
+                ];
+                const maxValor = Math.max(...categorias.map(c => c.valor), 1);
+                categorias.forEach(cat => {
+                    const altura = (cat.valor / maxValor) * 80;
+                    const barra = document.createElement('div');
+                    barra.className = 'bar';
+                    barra.style.height = `${altura}px`;
+                    barra.style.backgroundColor = cat.color;
+                    barra.style.width = '30px';
+                    barra.style.margin = '0 5px';
+                    barra.title = `${cat.nombre}: ${cat.valor}`;
+                    graficaDiv.appendChild(barra);
+                });
+
+                // Detalle numérico
+                document.getElementById('detalleTipos').innerHTML = `
+                    🔥 QUEMAS: ${data.quemas} &nbsp;|&nbsp;
+                    🪵 TALA: ${data.tala} &nbsp;|&nbsp;
+                    🗑️ BASURA: ${data.basura} &nbsp;|&nbsp;
+                    👃 OLORES: ${data.olor}
+                `;
+
+                // Esta semana y tendencia
+                document.getElementById('estaSemana').innerHTML = `ESTA SEMANA: ${data.esta_semana || 0} REPORTES`;
+                const aumento = data.aumento_semanal || 0;
+                document.getElementById('tendencia').innerHTML = aumento > 0 ? `▲ AUMENTO DEL ${aumento}% VS SEMANA PASADA` : 
+                                                                (aumento < 0 ? `▼ DISMINUCIÓN DEL ${-aumento}%` : 'SIN CAMBIO');
+
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+                document.getElementById('totalReportes').innerHTML = 'TOTAL DE REPORTES: ERROR';
+            }
+        }
+
+        // -------------------- CONSEJOS --------------------
+        async function cargarConsejos() {
+            const container = document.getElementById('consejosContainer');
+            container.innerHTML = '<div class="consejo-item">Cargando consejos...</div>';
+            try {
+                const response = await fetch('obtener_consejos.php');
+                const consejos = await response.json();
+                container.innerHTML = '';
+                consejos.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'consejo-item';
+                    div.innerHTML = `<strong>${c.titulo}</strong><br>${c.descripcion}`;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Error cargando consejos:', error);
+                container.innerHTML = '<div class="consejo-item">No se pudieron cargar los consejos. Intente más tarde.</div>';
+            }
+        }
+
+        // Compartir estadísticas (simulado)
+        document.getElementById('btnCompartir')?.addEventListener('click', () => {
+            const total = document.getElementById('totalReportes').innerText;
+            alert(`Compartir estadísticas: ${total}\n(Esta función se integrará con Web Share API en futuras versiones)`);
+        });
+
+        // Inicialización
+        window.onload = () => {
+            initMap();
+            cargarEstadisticas();
+            cargarConsejos();
+        };
+    </script>
+</body>
+</html>

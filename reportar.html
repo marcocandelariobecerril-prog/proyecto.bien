@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Reporte - Guardián del Aire</title>
+    <style>
+        body { font-family: 'Comic Sans MS', cursive; background-color: #95a5a6; padding: 20px; margin: 0; }
+        .form-box { 
+            background: white; border: 2px solid black; padding: 20px; 
+            max-width: 400px; margin: auto; box-shadow: 5px 5px 0px #000; 
+        }
+        h2 { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; color: #2c3e50; }
+        label { display: block; margin-top: 15px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 10px; border: 2px solid black; box-sizing: border-box; font-family: inherit; }
+        
+        .btn-camera { background: #3498db; color: white; }
+        .btn-location { background: #f39c12; color: white; }
+        .btn-capture { background: #2ecc71; color: white; }
+        
+        .btn-action {
+            border: 2px solid black; padding: 10px; width: 100%; margin-top: 10px; 
+            cursor: pointer; font-weight: bold; text-align: center; display: block; box-sizing: border-box;
+        }
+
+        #preview { width: 100%; margin-top: 10px; border: 1px solid black; display: none; }
+        .video-preview { width: 100%; border: 2px solid black; display: none; margin-top: 10px; }
+
+        .btn-enviar { 
+            background: #2ecc71; color: white; border: 2px solid black; 
+            width: 100%; padding: 15px; margin-top: 20px; font-weight: bold; 
+            cursor: pointer; box-shadow: 3px 3px 0px #000;
+        }
+        .btn-enviar:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        #info-fecha {
+            margin-top: 10px; font-size: 12px; color: #2c3e50; background: #ecf0f1;
+            padding: 5px; border: 1px solid black; text-align: center;
+        }
+        
+        .status-msg { font-size: 12px; margin-top: 5px; text-align: center; font-weight: bold; }
+        .error-msg { color: red; }
+        .success-msg { color: green; }
+        
+        /* Ocultar el input file */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* ========== CÓDIGO RESPONSIVE AGREGADO (SIN MODIFICAR LO EXISTENTE) ========== */
+        
+        /* Tablets y móviles */
+        @media (max-width: 768px) {
+            .form-box {
+                padding: 15px;
+                margin: 10px;
+            }
+            .btn-action, .btn-enviar {
+                padding: 8px;
+                font-size: 13px;
+            }
+            input, select, textarea {
+                font-size: 16px;
+            }
+        }
+        
+        /* Móviles pequeños */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .form-box {
+                padding: 12px;
+            }
+            h2 {
+                font-size: 18px;
+            }
+            label {
+                font-size: 12px;
+                margin-top: 12px;
+            }
+            .btn-action {
+                font-size: 11px;
+                padding: 8px;
+            }
+            .btn-enviar {
+                font-size: 14px;
+                padding: 12px;
+            }
+            #info-fecha {
+                font-size: 10px;
+            }
+            .status-msg {
+                font-size: 10px;
+            }
+        }
+        
+        /* Móviles muy pequeños */
+        @media (max-width: 360px) {
+            .form-box {
+                padding: 10px;
+            }
+            h2 {
+                font-size: 16px;
+            }
+            .btn-action {
+                font-size: 10px;
+            }
+        }
+        
+        /* Mejora táctil para botones en móviles */
+        @media (max-width: 768px) {
+            .btn-action, .btn-enviar, .btn-location, .btn-camera, .btn-capture {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-box">
+        <h2>NUEVO REPORTE</h2>
+        <form id="reportForm" enctype="multipart/form-data">
+            
+            <label>TIPO DE PROBLEMA:</label>
+            <select name="tipo_id" id="tipo_id" required>
+                <option value="1">🔥 Quema de Basura</option>
+                <option value="2">🪵 Tala de Árboles</option>
+                <option value="3">🗑️ Basura Acumulada</option>
+                <option value="4">👃 Malos Olores</option>
+            </select>
+
+            <label>DESCRIPCIÓN:</label>
+            <textarea name="descripcion" id="descripcion" rows="3" placeholder="¿Qué está pasando?"></textarea>
+
+            <label>EVIDENCIA (FOTO):</label>
+            <input type="file" name="foto" id="foto" accept="image/*">
+            <div class="btn-action btn-camera" onclick="document.getElementById('foto').click()">📁 GALERÍA</div>
+            <div class="btn-action btn-capture" id="btn-camera-start">📸 USAR CÁMARA</div>
+            
+            <video id="video" class="video-preview" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+            <img id="preview" src="#" alt="Vista previa">
+            <div id="info-fecha">📅 Sin fecha registrada</div>
+
+            <label>UBICACIÓN:</label>
+            <input type="text" name="latitud" id="lat" placeholder="Esperando latitud..." required readonly>
+            <input type="text" name="longitud" id="lng" placeholder="Esperando longitud..." required readonly style="margin-top:5px;">
+            <div class="btn-action btn-location" onclick="obtenerUbicacionActual()">📍 ACTUALIZAR UBICACIÓN</div>
+            <div id="location-status" class="status-msg"></div>
+
+            <input type="hidden" name="fecha_hora_foto" id="fecha_hora_foto">
+
+            <button type="button" class="btn-enviar" id="btnSubmit">ENVIAR REPORTE</button>
+        </form>
+        <p style="text-align: center;"><a href="index.html" style="color: black; text-decoration: none;">← CANCELAR</a></p>
+    </div>
+
+    <script>
+        const form = document.getElementById('reportForm');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const fotoInput = document.getElementById('foto');
+        const preview = document.getElementById('preview');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        let mediaStream = null;
+
+        function actualizarFechaHora() {
+            const ahora = new Date();
+            const fecha = ahora.toISOString().slice(0, 19).replace('T', ' ');
+            document.getElementById('fecha_hora_foto').value = fecha;
+            document.getElementById('info-fecha').innerHTML = `📸 Registrado: ${fecha}`;
+        }
+
+        function obtenerUbicacionActual() {
+            const status = document.getElementById('location-status');
+            status.innerHTML = "🛰️ Localizando...";
+            status.className = "status-msg";
+            
+            if (!navigator.geolocation) {
+                status.innerHTML = "❌ GPS no soportado";
+                status.className = "status-msg error-msg";
+                activarManual();
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    document.getElementById('lat').value = pos.coords.latitude.toFixed(6);
+                    document.getElementById('lng').value = pos.coords.longitude.toFixed(6);
+                    status.innerHTML = "✅ Ubicación lista";
+                    status.className = "status-msg success-msg";
+                },
+                error => {
+                    status.innerHTML = "❌ Error de GPS. Ingresa manual.";
+                    status.className = "status-msg error-msg";
+                    activarManual();
+                }
+            );
+        }
+
+        function activarManual() {
+            document.getElementById('lat').readOnly = false;
+            document.getElementById('lng').readOnly = false;
+            document.getElementById('lat').placeholder = "Ej: 19.284900";
+            document.getElementById('lng').placeholder = "Ej: -99.734200";
+        }
+
+        document.getElementById('btn-camera-start').onclick = async () => {
+            const esLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (!esLocalhost && window.location.protocol !== 'https:') {
+                alert("⚠️ Para usar la cámara necesitas acceder por http://localhost\n\nMientras tanto, usa 'GALERÍA' para subir una foto.");
+                return;
+            }
+            
+            try {
+                const constraints = { video: true };
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = mediaStream;
+                video.style.display = 'block';
+                preview.style.display = 'none';
+                
+                await video.play();
+                
+                const btnExistente = document.getElementById('temp-capture-btn');
+                if (btnExistente) btnExistente.remove();
+                
+                const btnCapturar = document.createElement('button');
+                btnCapturar.id = 'temp-capture-btn';
+                btnCapturar.innerText = "🎯 CAPTURAR FOTO";
+                btnCapturar.className = "btn-action btn-capture";
+                btnCapturar.style.marginTop = "10px";
+                video.after(btnCapturar);
+                
+                btnCapturar.onclick = () => {
+                    if (!video.videoWidth) {
+                        alert("Espera a que la cámara se active...");
+                        return;
+                    }
+                    
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    
+                    canvas.toBlob(blob => {
+                        const file = new File([blob], "captura_" + Date.now() + ".jpg", { type: "image/jpeg" });
+                        const container = new DataTransfer();
+                        container.items.add(file);
+                        fotoInput.files = container.files;
+                        
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.src = e.target.result;
+                            preview.style.display = 'block';
+                        };
+                        reader.readAsDataURL(blob);
+                        
+                        if (mediaStream) {
+                            mediaStream.getTracks().forEach(track => track.stop());
+                            video.style.display = 'none';
+                            video.srcObject = null;
+                            mediaStream = null;
+                        }
+                        btnCapturar.remove();
+                        actualizarFechaHora();
+                        alert("✅ Foto capturada correctamente");
+                    }, 'image/jpeg', 0.9);
+                };
+                
+            } catch (err) {
+                console.error("Error cámara:", err);
+                let mensaje = "";
+                if (err.name === "NotAllowedError") {
+                    mensaje = "❌ Permiso denegado. Permite el acceso a la cámara.";
+                } else if (err.name === "NotFoundError") {
+                    mensaje = "❌ No se encontró cámara en tu dispositivo.";
+                } else {
+                    mensaje = "❌ No se pudo acceder a la cámara. Usa 'GALERÍA'.";
+                }
+                alert(mensaje);
+            }
+        };
+
+        fotoInput.onchange = () => {
+            if (fotoInput.files && fotoInput.files[0]) {
+                const file = fotoInput.files[0];
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("❌ La imagen es muy grande. Máximo 5MB.");
+                    fotoInput.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    actualizarFechaHora();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        async function enviarReporte() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const tipo = document.getElementById('tipo_id').value;
+            const foto = fotoInput.files[0];
+            
+            if (!lat || !lng) {
+                alert("❌ Por favor obtén la ubicación primero.");
+                return;
+            }
+            
+            if (!foto) {
+                alert("❌ Por favor toma o selecciona una foto.");
+                return;
+            }
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "🚀 ENVIANDO...";
+            
+            const formData = new FormData();
+            formData.append('tipo_id', tipo);
+            formData.append('descripcion', document.getElementById('descripcion').value);
+            formData.append('latitud', lat);
+            formData.append('longitud', lng);
+            formData.append('fecha_hora_foto', document.getElementById('fecha_hora_foto').value);
+            formData.append('foto', foto);
+            
+            try {
+                const response = await fetch('guardar_reporte.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const texto = await response.text();
+                console.log("Respuesta:", texto);
+                
+                if (texto.includes("éxito") || texto.includes("success") || texto.includes("true")) {
+                    alert("✅ ¡Reporte enviado! Gracias por cuidar el aire.");
+                    window.location.href = 'index.html';
+                } else {
+                    throw new Error(texto);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("⚠️ Error al enviar: " + error.message);
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "ENVIAR REPORTE";
+            }
+        }
+        
+        btnSubmit.onclick = () => {
+            enviarReporte();
+        };
+        
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            enviarReporte();
+            return false;
+        };
+        
+        window.onload = () => {
+            obtenerUbicacionActual();
+            actualizarFechaHora();
+        };
+        
+        window.addEventListener('beforeunload', () => {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
